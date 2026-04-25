@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UCAN Sessions Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e27;--s1:#131836;--s2:#1a2147;--acc:#6c63ff;--acc2:#8b5cf6;--ok:#00d68f;--err:#ff6b6b;--t1:#e8e8f0;--t2:#9ca3c0;--r:12px;--tr:.3s}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh}
+.hidden{display:none!important}
+#app{max-width:900px;margin:0 auto;padding:16px}
+header{background:var(--s1);padding:14px 20px;border-radius:var(--r);border:1px solid rgba(108,99,255,.15);margin-bottom:20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+header h1{font-size:1.3rem;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+.hbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font-family:'Inter',sans-serif;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.83rem;transition:all var(--tr)}
+.bp{background:var(--acc);color:#fff}.bp:hover{background:var(--acc2);transform:translateY(-1px)}
+.bd{background:rgba(255,107,107,.12);color:var(--err);border:1px solid rgba(255,107,107,.25)}.bd:hover{background:rgba(255,107,107,.22)}
+.bg{background:rgba(108,99,255,.1);color:var(--acc);border:1px solid rgba(108,99,255,.2)}.bg:hover{background:rgba(108,99,255,.2)}
+.bs{padding:5px 10px;font-size:.75rem}
+.streak{display:inline-flex;align-items:center;gap:5px;background:rgba(255,165,0,.12);color:#ffa500;padding:4px 12px;border-radius:16px;font-size:.8rem;font-weight:600}
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:55vh;gap:16px;text-align:center}
+#login-screen h2{font-size:1.5rem;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#login-screen p{color:var(--t2);max-width:380px}
+.summary-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+@media(max-width:600px){.summary-row{grid-template-columns:1fr}}
+.scard{background:var(--s1);border-radius:var(--r);border:1px solid rgba(108,99,255,.1);padding:18px;text-align:center}
+.scard h2{font-size:.9rem;color:var(--t2);margin-bottom:10px;font-weight:500}
+.donut-wrap{width:160px;height:160px;margin:0 auto}
+.chart-wrap{height:180px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.mcard{background:var(--s1);border-radius:var(--r);border:1px solid rgba(108,99,255,.08);padding:18px;cursor:pointer;transition:all var(--tr);text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.mcard:hover{border-color:var(--acc);transform:translateY(-2px);box-shadow:0 8px 24px rgba(108,99,255,.15)}
+.mcard h3{font-size:1rem;font-weight:600}.mcard .msub{color:var(--t2);font-size:.8rem}
+.ring-wrap{width:60px;height:60px;flex-shrink:0}
+.ring-sm{width:36px;height:36px}
+.ring-bg{fill:none;stroke:var(--s2);stroke-width:4}
+.ring-fg{fill:none;stroke:var(--acc);stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .6s ease,stroke .3s;transform:rotate(-90deg);transform-origin:50% 50%}
+.ring-fg.done{stroke:var(--ok)}
+#month-frame .mf-top{background:var(--s1);border-radius:var(--r);border:1px solid rgba(108,99,255,.1);padding:18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+#month-frame .mf-top h2{flex:1;font-size:1.2rem}
+#back-btn{background:none;color:var(--acc);font-size:.9rem;padding:6px 0;margin-bottom:12px}
+#back-btn:hover{color:var(--acc2)}
+.sub-sec{background:var(--s1);border-radius:var(--r);border:1px solid rgba(108,99,255,.06);margin-bottom:12px;overflow:hidden}
+.sub-hdr{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;user-select:none;transition:background var(--tr)}
+.sub-hdr:hover{background:var(--s2)}
+.sub-hdr h3{flex:1;font-size:.95rem;font-weight:600}
+.sub-hdr .arrow{color:var(--t2);transition:transform var(--tr);font-size:.75rem}
+.sub-hdr.collapsed .arrow{transform:rotate(-90deg)}
+.sub-prog{color:var(--t2);font-size:.8rem;font-weight:500}
+.sub-bar{height:3px;background:var(--s2);margin:0}
+.sub-bar-fill{height:100%;background:var(--acc);transition:width .5s ease;border-radius:0 2px 2px 0}
+.sub-bar-fill.done{background:var(--ok)}
+.sess-list{padding:8px 16px 12px}
+.sess{padding:9px 12px;border-radius:8px;margin-bottom:5px;display:flex;align-items:center;gap:11px;transition:all var(--tr);cursor:pointer;background:rgba(255,255,255,.02)}
+.sess:hover{background:rgba(108,99,255,.06)}
+.sess.completed{background:rgba(0,214,143,.05)}
+.sess.completed .sn{color:var(--t2);text-decoration:line-through}
+.chk{width:20px;height:20px;border-radius:5px;border:2px solid var(--t2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--tr)}
+.sess.completed .chk{background:var(--ok);border-color:var(--ok)}
+.chk svg{width:13px;height:13px;opacity:0;transition:opacity var(--tr)}
+.sess.completed .chk svg{opacity:1}
+.sn{font-size:.88rem;flex:1}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--ok);color:#fff;padding:9px 22px;border-radius:20px;font-weight:600;font-size:.83rem;z-index:9999;transition:transform .35s ease;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#loading-overlay{position:fixed;inset:0;background:rgba(10,14,39,.92);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:10000}
+.spinner{width:36px;height:36px;border:3px solid var(--s2);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading-overlay p{color:var(--t2);margin-top:14px;font-size:.88rem}
+footer{text-align:center;padding:18px;color:var(--t2);font-size:.78rem}
+.confetti{position:fixed;width:7px;height:7px;border-radius:2px;pointer-events:none;z-index:9998;animation:cfall 1s ease-out forwards}
+@keyframes cfall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(110px) rotate(720deg)}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<h1>📚 UCAN Sessions</h1>
+<div id="login-header"><button class="bp" id="login-btn">Login with Google</button></div>
+<div id="user-header" class="hidden"><div class="hbtns">
+<span class="streak" id="streak-badge">🔥 0 day streak</span>
+<button class="bg" id="sync-btn">🔄 Sync</button>
+<button class="bd bs" id="reset-all-btn">Start Fresh</button>
+<button class="bd bs" id="logout-btn">Logout</button>
+</div></div>
+</header>
+<div id="login-screen"><h2>Track Your UCAN Sessions</h2><p>Sign in with Google to sync progress across all devices via Google Drive.</p></div>
+<main id="main-content" class="hidden">
+<!-- MAIN FRAME -->
+<div id="main-frame">
+<div class="summary-row">
+<div class="scard"><h2>Overall Completion</h2><div class="donut-wrap"><canvas id="donut-chart"></canvas></div><p id="overall-text" style="margin-top:8px;font-size:.83rem;color:var(--t2)">0/0</p></div>
+<div class="scard"><h2>Monthly Trend</h2><div class="chart-wrap"><canvas id="bar-chart"></canvas></div></div>
+</div>
+<div id="months-grid" class="mgrid"></div>
+</div>
+<!-- MONTH FRAME -->
+<div id="month-frame" class="hidden">
+<button id="back-btn">← Back to Months</button>
+<div class="mf-top">
+<div class="ring-wrap" id="mf-ring"></div>
+<h2 id="mf-title"></h2>
+<span class="sub-prog" id="mf-count"></span>
+<button class="bd bs" id="reset-month-btn">Reset Month</button>
+</div>
+<div id="month-subjects"></div>
+</div>
+</main>
+<div id="loading-overlay" class="hidden"><div class="spinner"></div><p>Scanning Drive…</p></div>
+<div id="toast">Progress saved ✓</div>
+<footer id="footer"></footer>
+</div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+const CFG={CLIENT_ID:'380029556824-vn0gbo7gtbac9sn5ih77lnlthg62gubg.apps.googleusercontent.com',SCOPES:'https://www.googleapis.com/auth/drive',ROOT:'UCAN Sessions',PFILE:'progress.json'};
+const MS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MF=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const st={token:null,rootId:null,pfId:null,prog:{},subjects:[],months:{},currentMonth:null};
+let dChart=null,bChart=null,tClient;
+
+function parseInfo(fn){
+ const c=fn.replace(/\.pdf$/i,'');const m=c.match(/^([A-Za-z]{3})_(\d{4})_Session_(\d+)/i);
+ if(!m)return{mo:null,yr:null,sn:null,mk:null,sk:99999};
+ const mi=MS.findIndex(x=>x.toLowerCase()===m[1].toLowerCase());
+ const yr=parseInt(m[2]),sn=parseInt(m[3]);
+ return{mo:mi>=0?mi:0,yr,sn,mk:`${MF[mi>=0?mi:0]} ${yr}`,sk:yr*100+(mi>=0?mi:0)};
+}
+
+// Auth
+function initAuth(){
+ tClient=google.accounts.oauth2.initTokenClient({client_id:CFG.CLIENT_ID,scope:CFG.SCOPES,
+  callback:r=>{if(r&&r.access_token){st.token=r.access_token;sessionStorage.setItem('ut',r.access_token);onIn()}}});
+ const t=sessionStorage.getItem('ut');if(t){st.token=t;onIn()}
+}
+function onIn(){
+ $('login-header').classList.add('hidden');$('login-screen').classList.add('hidden');
+ $('user-header').classList.remove('hidden');$('main-content').classList.remove('hidden');
+ runApp();
+}
+function onOut(){
+ $('login-header').classList.remove('hidden');$('login-screen').classList.remove('hidden');
+ $('user-header').classList.add('hidden');$('main-content').classList.add('hidden');
+}
+function $(id){return document.getElementById(id)}
+$('login-btn').addEventListener('click',()=>tClient.requestAccessToken());
+$('logout-btn').addEventListener('click',()=>{
+ if(st.token)google.accounts.oauth2.revoke(st.token,()=>{});
+ st.token=null;sessionStorage.removeItem('ut');onOut();
+});
+window.onload=()=>initAuth();
+
+// API
+async function api(path,opts={}){
+ const url=path.startsWith('http')?path:`https://www.googleapis.com/drive/v3/${path}`;
+ const h=new Headers(opts.headers||{});h.append('Authorization',`Bearer ${st.token}`);
+ const r=await fetch(url,{...opts,headers:h});
+ if(r.status===401){sessionStorage.removeItem('ut');st.token=null;onOut();throw Error('Auth')}
+ if(!r.ok){console.error(await r.json().catch(()=>{}));throw Error(`API ${r.status}`)}
+ return r;
+}
+function loading(s){$('loading-overlay').classList.toggle('hidden',!s)}
+
+async function runApp(){
+ loading(true);
+ try{
+  const rq=`name='${CFG.ROOT}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  const rd=await(await api(`files?q=${encodeURIComponent(rq)}&fields=files(id,name)`)).json();
+  if(!rd.files||!rd.files.length){alert('Folder not found');loading(false);return}
+  st.rootId=rd.files[0].id;
+  await loadProg();await loadData();buildMonths();renderMain();
+  $('footer').textContent=`Last synced: ${new Date().toLocaleString()}`;
+ }catch(e){console.error(e);alert('Load failed')}
+ finally{loading(false)}
+}
+
+async function loadProg(){
+ const q=`name='${CFG.PFILE}' and '${st.rootId}' in parents and trashed=false`;
+ const d=await(await api(`files?q=${encodeURIComponent(q)}&fields=files(id)`)).json();
+ if(d.files&&d.files.length>0){
+  st.pfId=d.files[0].id;
+  st.prog=await(await api(`files/${st.pfId}?alt=media`)).json()||{};
+ }else{
+  const meta={name:CFG.PFILE,parents:[st.rootId],mimeType:'application/json'};
+  const fm=new FormData();
+  fm.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+  fm.append('file',new Blob([JSON.stringify({})],{type:'application/json'}));
+  const cd=await(await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',body:fm})).json();
+  st.pfId=cd.id;st.prog={};
+ }
+}
+async function saveProg(){
+ if(!st.pfId)return;
+ await api(`https://www.googleapis.com/upload/drive/v3/files/${st.pfId}?uploadType=media`,
+  {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(st.prog)});
+ toast();
+}
+
+async function loadData(){
+ const sq=`'${st.rootId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+ const sd=await(await api(`files?q=${encodeURIComponent(sq)}&fields=files(id,name)&orderBy=name`)).json();
+ st.subjects=sd.files||[];
+ if(st.subjects.length>0){
+  const fids=st.subjects.map(s=>`'${s.id}' in parents`).join(' or ');
+  const pq=`(${fids}) and mimeType='application/pdf' and trashed=false`;
+  const pd=await(await api(`files?q=${encodeURIComponent(pq)}&fields=files(id,name,parents)&pageSize=1000`)).json();
+  (pd.files||[]).forEach(p=>{
+   const sub=st.subjects.find(s=>p.parents&&p.parents.includes(s.id));
+   if(!sub)return;if(!sub.sessions)sub.sessions=[];
+   const info=parseInfo(p.name);const pr=st.prog[p.id];
+   sub.sessions.push({id:p.id,rawName:p.name,name:p.name.replace(/\.pdf$/i,''),
+    completed:!!pr,ts:typeof pr==='string'?pr:null,subName:sub.name,subId:sub.id,...info});
+  });
+  st.subjects.forEach(s=>{if(s.sessions)s.sessions.sort((a,b)=>a.sk-b.sk)});
+ }
+}
+
+function buildMonths(){
+ st.months={};
+ st.subjects.forEach(sub=>{
+  (sub.sessions||[]).forEach(s=>{
+   const k=s.mk||'Unknown';
+   if(!st.months[k])st.months[k]={key:k,sk:s.sk,subjects:{}};
+   if(!st.months[k].subjects[sub.name])st.months[k].subjects[sub.name]=[];
+   st.months[k].subjects[sub.name].push(s);
+  });
+ });
+}
+
+$('sync-btn').addEventListener('click',()=>runApp());
+$('back-btn').addEventListener('click',()=>{st.currentMonth=null;$('main-frame').classList.remove('hidden');$('month-frame').classList.add('hidden');renderMain()});
+
+// Toast
+function toast(m='Progress saved ✓'){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+
+// Confetti
+function confetti(x,y){
+ const cols=['#6c63ff','#00d68f','#ffa500','#ff6b6b','#8b5cf6'];
+ for(let i=0;i<12;i++){const e=document.createElement('div');e.className='confetti';
+  e.style.left=(x+Math.random()*40-20)+'px';e.style.top=(y+Math.random()*20-10)+'px';
+  e.style.background=cols[i%5];document.body.appendChild(e);setTimeout(()=>e.remove(),1100)}
+}
+
+// Streak
+function streak(){
+ const ds=new Set();
+ Object.values(st.prog).forEach(v=>{if(typeof v==='string')try{ds.add(new Date(v).toISOString().slice(0,10))}catch(e){}});
+ if(!ds.size)return 0;const s=[...ds].sort().reverse();
+ const td=new Date().toISOString().slice(0,10),yd=new Date(Date.now()-864e5).toISOString().slice(0,10);
+ if(s[0]!==td&&s[0]!==yd)return 0;let c=1;
+ for(let i=0;i<s.length-1;i++){if(new Date(s[i])-new Date(s[i+1])===864e5)c++;else break}return c;
+}
+
+// Ring SVG helper
+function ring(size,pct){
+ const r=size==='lg'?26:14,circ=2*Math.PI*r,vb=size==='lg'?60:36;
+ return`<svg viewBox="0 0 ${vb} ${vb}"><circle class="ring-bg" cx="${vb/2}" cy="${vb/2}" r="${r}"/>
+ <circle class="ring-fg${pct>=100?' done':''}" cx="${vb/2}" cy="${vb/2}" r="${r}" stroke-dasharray="${circ}" stroke-dashoffset="${circ-circ*Math.min(pct,100)/100}"/></svg>`;
+}
+
+// Month stats helper
+function monthStats(mk){
+ const m=st.months[mk];if(!m)return{done:0,total:0,pct:0};
+ let d=0,t=0;Object.values(m.subjects).forEach(arr=>{arr.forEach(s=>{t++;if(s.completed)d++})});
+ return{done:d,total:t,pct:t?Math.round(d/t*100):0};
+}
+
+// Reset
+$('reset-all-btn').addEventListener('click',async()=>{
+ if(!confirm('⚠️ Clear ALL progress?'))return;st.prog={};
+ st.subjects.forEach(s=>(s.sessions||[]).forEach(x=>{x.completed=false;x.ts=null}));
+ await saveProg();buildMonths();renderMain();
+});
+$('reset-month-btn').addEventListener('click',async()=>{
+ if(!st.currentMonth||!confirm(`Reset ${st.currentMonth}?`))return;
+ const m=st.months[st.currentMonth];if(!m)return;
+ Object.values(m.subjects).forEach(arr=>arr.forEach(s=>{s.completed=false;s.ts=null;delete st.prog[s.id]}));
+ await saveProg();renderMonthFrame(st.currentMonth);
+});
+
+// ====== RENDER MAIN FRAME ======
+function renderMain(){
+ const grid=$('months-grid');grid.innerHTML='';
+ const sorted=Object.keys(st.months).sort((a,b)=>st.months[a].sk-st.months[b].sk);
+ let allD=0,allT=0;const barLabels=[],barVals=[];
+
+ sorted.forEach(mk=>{
+  const s=monthStats(mk);allD+=s.done;allT+=s.total;
+  barLabels.push(mk.replace(/(\w+)\s/,'$1 '));barVals.push(s.pct);
+  const subCount=Object.keys(st.months[mk].subjects).length;
+  const card=document.createElement('div');card.className='mcard';
+  card.innerHTML=`<div class="ring-wrap">${ring('lg',s.pct)}</div><h3>${mk}</h3>
+   <span class="msub">${subCount} subject${subCount!==1?'s':''} · ${s.done}/${s.total}</span>`;
+  card.addEventListener('click',()=>{st.currentMonth=mk;$('main-frame').classList.add('hidden');$('month-frame').classList.remove('hidden');renderMonthFrame(mk)});
+  grid.appendChild(card);
+ });
+
+ const oPct=allT?Math.round(allD/allT*100):0;
+ $('overall-text').textContent=`${allD}/${allT} sessions (${oPct}%)`;
+
+ if(dChart)dChart.destroy();
+ dChart=new Chart($('donut-chart'),{type:'doughnut',
+  data:{labels:['Done','Left'],datasets:[{data:[allD,allT-allD],backgroundColor:['#00d68f','#1a2147'],borderWidth:0,borderRadius:4}]},
+  options:{cutout:'72%',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}}}});
+
+ if(bChart)bChart.destroy();
+ bChart=new Chart($('bar-chart'),{type:'bar',
+  data:{labels:barLabels,datasets:[{data:barVals,backgroundColor:'rgba(108,99,255,.55)',borderRadius:5,borderSkipped:false}]},
+  options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%',color:'#9ca3c0'},grid:{color:'rgba(255,255,255,.04)'}},x:{ticks:{color:'#9ca3c0',maxRotation:45},grid:{display:false}}},plugins:{legend:{display:false}}}});
+
+ const sk=streak();$('streak-badge').textContent=`🔥 ${sk} day${sk!==1?'s':''} streak`;
+}
+
+// ====== RENDER MONTH FRAME ======
+function renderMonthFrame(mk){
+ const m=st.months[mk];if(!m)return;
+ const s=monthStats(mk);
+ $('mf-title').textContent=mk;$('mf-count').textContent=`${s.done}/${s.total} (${s.pct}%)`;
+ $('mf-ring').innerHTML=ring('lg',s.pct);
+ const cont=$('month-subjects');cont.innerHTML='';
+
+ Object.keys(m.subjects).sort().forEach(subName=>{
+  const sessions=m.subjects[subName];
+  const sc=sessions.filter(x=>x.completed).length,tc=sessions.length,p=tc?Math.round(sc/tc*100):0;
+  const sec=document.createElement('div');sec.className='sub-sec';
+
+  const hdr=document.createElement('div');hdr.className='sub-hdr';
+  hdr.innerHTML=`<div class="ring-wrap ring-sm">${ring('sm',p)}</div><h3>${subName}</h3><span class="sub-prog">${sc}/${tc}</span><span class="arrow">▼</span>`;
+  const bar=document.createElement('div');bar.className='sub-bar';
+  bar.innerHTML=`<div class="sub-bar-fill${p>=100?' done':''}" style="width:${p}%"></div>`;
+  const list=document.createElement('div');list.className='sess-list';
+
+  sessions.sort((a,b)=>a.sn-b.sn).forEach(session=>{
+   const card=document.createElement('div');
+   card.className=`sess${session.completed?' completed':''}`;
+   card.innerHTML=`<div class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div><span class="sn">${session.name}</span>`;
+   card.addEventListener('click',async()=>{
+    session.completed=!session.completed;card.classList.toggle('completed');
+    if(session.completed){const ts=new Date().toISOString();st.prog[session.id]=ts;session.ts=ts;
+     const r=card.getBoundingClientRect();confetti(r.left+r.width/2,r.top);
+    }else{delete st.prog[session.id];session.ts=null}
+    // Update month frame stats
+    const ns=monthStats(mk);$('mf-count').textContent=`${ns.done}/${ns.total} (${ns.pct}%)`;$('mf-ring').innerHTML=ring('lg',ns.pct);
+    // Update subject stats in this section
+    const nsc=sessions.filter(x=>x.completed).length,np=tc?Math.round(nsc/tc*100):0;
+    hdr.querySelector('.sub-prog').textContent=`${nsc}/${tc}`;
+    hdr.querySelector('.ring-wrap').innerHTML=ring('sm',np);
+    bar.innerHTML=`<div class="sub-bar-fill${np>=100?' done':''}" style="width:${np}%"></div>`;
+    try{await saveProg()}catch(e){console.error(e)}
+   });
+   list.appendChild(card);
+  });
+
+  hdr.addEventListener('click',e=>{if(e.target.closest('.chk'))return;list.classList.toggle('hidden');hdr.classList.toggle('collapsed')});
+  sec.appendChild(hdr);sec.appendChild(bar);sec.appendChild(list);cont.appendChild(sec);
+ });
+}
+</script>
+</body>
+</html>
